@@ -10,9 +10,9 @@ namespace ConfluenceAccess.MindMap
     {
         public Node Root { get; internal set; }   
         
-        public Tree(long rootId, string rootTitle)
+        public Tree(long rootId, string rootTitle, string baseUrl, string confluenceSpace)
         {
-            Root = new Node(rootId, rootTitle);
+            Root = new Node(rootId, rootTitle, null, baseUrl, confluenceSpace);
         }
 
         public override string ToString()

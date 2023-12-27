@@ -10,6 +10,7 @@ namespace ConfluenceAccess
     internal class Node
     {
         static Random random = new Random();
+
         static string GenerateUniqueAlphaNumericString(int length)
         {
             const string validChars = "123456789abcdefghijklmnopqrstuvwxyz";
@@ -27,21 +28,24 @@ namespace ConfluenceAccess
         public string Title { get; }
 
         public Node Parent { get; }
-
+        public string BaseUrl { get; }
+        public string ConfluenceSpace { get; }
         public IList<Node> Children { get; } = new List<Node>();
 
         public Node Add(long id, string title)
         {
-            Node child = new Node(id, title, this);
+            Node child = new Node(id, title, this, this.BaseUrl, this.ConfluenceSpace);
             Children.Add(child);
             return child;
         }
 
-        public Node(long id, string title, Node parent = null)
+        public Node(long id, string title, Node parent, string baseUrl, string confluenceSpace)
         {
             this.ID = id;
             this.Title = title;
             this.Parent = parent;
+            this.BaseUrl = baseUrl.EndsWith(@"/") == false ? baseUrl : baseUrl.Substring(baseUrl.Length - 2);
+            this.ConfluenceSpace = confluenceSpace;
         }
 
         public override string ToString()
@@ -53,8 +57,9 @@ namespace ConfluenceAccess
 
         private void BuildXMLString(StringBuilder builder)
         {
+            string url = $"""{BaseUrl}content/{ID}" MODIFIED="1697068041472" TEXT="{System.Security.SecurityElement.Escape(this.Title)}" """;
             builder
-                .Append($"<node CREATED=\"1697068041472\" ID=\"{this.NodeID}\" LINK=\"https://chghealthcare.atlassian.net/wiki/content/{ID}\" MODIFIED=\"1697068041472\" TEXT=\"{System.Security.SecurityElement.Escape(this.Title)}\"")
+                .Append($"""<node CREATED="1697068041472" ID="{this.NodeID}" LINK="{BaseUrl}/spaces/{ConfluenceSpace}/pages/{ID}" MODIFIED="1697068041472" TEXT="{System.Security.SecurityElement.Escape(this.Title)}" """.Trim())
                 .AppendLine(this.Children.Count() == 0 ? "/>" : ">");
 
             foreach (Node n in this.Children)

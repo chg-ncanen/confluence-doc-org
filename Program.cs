@@ -5,20 +5,27 @@ using Dapplo.Confluence.Query;
 using ConfluenceAccess;
 using Dapplo.Confluence.Entities;
 using ConfluenceAccess.MindMap;
+using System.Configuration;
 
-var apiToken = Environment.GetEnvironmentVariable("CONFLUENCE_API");
-var apiUser = Environment.GetEnvironmentVariable("CONFLUENCE_USER");
 
-IConfluenceClient client = ConfluenceClient.Create(new Uri("https://chghealthcare.atlassian.net/wiki"));
+
+var apiToken = ConfigurationManager.AppSettings["CONFLUENCE_API"];
+var apiUser = ConfigurationManager.AppSettings["CONFLUENCE_USER"];
+var confluenceUrl = ConfigurationManager.AppSettings["CONFLUENCE_URl"];
+var confluenceSpace = ConfigurationManager.AppSettings["CONFLUENCE_SPACE"];
+var confluenceTopPage = ConfigurationManager.AppSettings["CONFLUENCE_TOP_PAGE_NUM"];
+var outputFile = args.Length > 0 ? args[0] : ConfigurationManager.AppSettings["OUTPUT_FILE"];
+
+IConfluenceClient client = ConfluenceClient.Create(new Uri(confluenceUrl));
 //ConfluenceClientConfig.ExpandGetContent = new string[] { "container", "children" };
 client.SetBasicAuthentication(apiUser, apiToken);
 PagingInformation paging = new PagingInformation() { Limit = 100};
 
-var content = await client.Content.GetAsync(930532);
+var content = await client.Content.GetAsync(int.Parse(confluenceTopPage));
 
 Queue<Node> que = new Queue<Node>();
 
-Tree tree = new Tree(content.Id, content.Title);
+Tree tree = new Tree(content.Id, content.Title, confluenceUrl, confluenceSpace);
 que.Enqueue(tree.Root);
 
 //int count = 0;
@@ -42,5 +49,5 @@ while (que.Any())
 
 string result = tree.ToString();
 Console.WriteLine(tree.ToString());
-File.WriteAllText(@"e:\temp\temp2.mm", result, System.Text.Encoding.UTF8);
+File.WriteAllText(outputFile, result, System.Text.Encoding.UTF8);
 
