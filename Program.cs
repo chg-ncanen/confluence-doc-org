@@ -8,13 +8,18 @@ using ConfluenceAccess.MindMap;
 using System.Configuration;
 
 
-
 var apiToken = ConfigurationManager.AppSettings["CONFLUENCE_API"];
 var apiUser = ConfigurationManager.AppSettings["CONFLUENCE_USER"];
 var confluenceUrl = ConfigurationManager.AppSettings["CONFLUENCE_URl"];
 var confluenceSpace = ConfigurationManager.AppSettings["CONFLUENCE_SPACE"];
 var confluenceTopPage = ConfigurationManager.AppSettings["CONFLUENCE_TOP_PAGE_NUM"];
 var outputFile = args.Length > 0 ? args[0] : ConfigurationManager.AppSettings["OUTPUT_FILE"];
+
+if (string.IsNullOrEmpty(apiToken))
+{
+    Console.WriteLine("CONFLUENCE_API api key was not specified, please update the app.config before running");
+    return;
+}
 
 IConfluenceClient client = ConfluenceClient.Create(new Uri(confluenceUrl));
 //ConfluenceClientConfig.ExpandGetContent = new string[] { "container", "children" };
