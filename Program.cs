@@ -4,55 +4,35 @@ using System.Collections;
 using Dapplo.Confluence.Query;
 using ConfluenceAccess;
 using Dapplo.Confluence.Entities;
-using ConfluenceAccess.MindMap;
 using System.Configuration;
+using System.Xml;
+using System.Diagnostics;
 
+IConfig config = new Config();
 
-var apiToken = ConfigurationManager.AppSettings["CONFLUENCE_API"];
-var apiUser = ConfigurationManager.AppSettings["CONFLUENCE_USER"];
-var confluenceUrl = ConfigurationManager.AppSettings["CONFLUENCE_URl"];
-var confluenceSpace = ConfigurationManager.AppSettings["CONFLUENCE_SPACE"];
-var confluenceTopPage = ConfigurationManager.AppSettings["CONFLUENCE_TOP_PAGE_NUM"];
-var outputFile = args.Length > 0 ? args[0] : ConfigurationManager.AppSettings["OUTPUT_FILE"];
-
-if (string.IsNullOrEmpty(apiToken))
+if (string.IsNullOrEmpty(config.ApiToken))
 {
     Console.WriteLine("CONFLUENCE_API api key was not specified, please update the app.config before running");
     return;
 }
 
-IConfluenceClient client = ConfluenceClient.Create(new Uri(confluenceUrl));
-//ConfluenceClientConfig.ExpandGetContent = new string[] { "container", "children" };
-client.SetBasicAuthentication(apiUser, apiToken);
-PagingInformation paging = new PagingInformation() { Limit = 100};
 
-var content = await client.Content.GetAsync(int.Parse(confluenceTopPage));
+var tree = await ConfluenceMindMap.ReadMindMap(config.OutputFile, config.ConfluenceUrl, config.ConfluenceSpace);
+Console.WriteLine(tree);
 
-Queue<Node> que = new Queue<Node>();
 
-Tree tree = new Tree(content.Id, content.Title, confluenceUrl, confluenceSpace);
-que.Enqueue(tree.Root);
+//await ReadConfluenceTreeAndSave(config);
 
-//int count = 0;
-//while (que.Any() && count++ < 40)
-while (que.Any())
+
+
+static async Task ReadConfluenceTreeAndSave(IConfig config)
 {
-    Node node = que.Dequeue();
-    var confluenceChildren = await client.Content.GetChildrenAsync(node.ID, paging);
+    var confluence = new Confluence(config.ApiUser, config.ApiToken, config.ConfluenceUrl, config.ConfluenceSpace);
+    var tree = await confluence.GetTree(int.Parse(config.ConfluenceTopPage));
 
-    Console.WriteLine(confluenceChildren.Count());
-    foreach (var c in confluenceChildren)
-    {
-        Node newChild = node.Add(c.Id, c.Title);
-        que.Enqueue(newChild);
+    string xml = new ConfluenceMindMap().CreateXmlFromTree(tree);
+    Console.WriteLine(xml);
 
-      Console.WriteLine($"{c.Id}: {c.Title}");
-    }
-
-    //Console.ReadLine();
+    File.WriteAllText(config.OutputFile, xml, System.Text.Encoding.UTF8);
 }
-
-string result = tree.ToString();
-Console.WriteLine(tree.ToString());
-File.WriteAllText(outputFile, result, System.Text.Encoding.UTF8);
 
