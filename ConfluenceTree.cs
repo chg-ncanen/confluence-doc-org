@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 namespace ConfluenceAccess
 {
-    internal class ConfluenceTree : ITree
+    public class ConfluenceTree : ITree
     {
         public ConfluenceNode Root { get; private set; }
 
@@ -53,6 +53,56 @@ namespace ConfluenceAccess
         internal void RegisterNode(ConfluenceNode child)
         {
             NodeLookupById.Add(child.ID, child);
+        }
+
+        [Flags]
+        public enum NodeAction
+        {
+            NoAction = 0,
+            Create = 1,
+            Update = 2,
+            Move = 4,
+            Delete = 8
+        }
+
+        public static List<(ConfluenceNode Node, NodeAction Action)> CompareSourceAndDestTrees(ConfluenceTree source, ConfluenceTree dest)
+        {
+            List<(ConfluenceNode Node, NodeAction Action)> actions = new List<(ConfluenceNode Node, NodeAction Action)>();
+
+            foreach (ConfluenceNode destNode in dest.NodeLookupById.Values)
+            {
+                if (source.NodeLookupById.ContainsKey(destNode.ID) == false)
+                {
+                    actions.Add((destNode, NodeAction.Create));
+                }
+            }
+            
+            foreach (ConfluenceNode sourceNode in source.NodeLookupById.Values)
+            {
+                NodeAction action = NodeAction.NoAction;
+
+                if (dest.NodeLookupById.ContainsKey(sourceNode.ID) == false)
+                {
+                    action |= NodeAction.Delete;
+                    actions.Add((sourceNode, action));
+                    continue;
+                }
+
+                ConfluenceNode destNode = dest.NodeLookupById[sourceNode.ID];
+                if (sourceNode.Title != destNode.Title)
+                {
+                    action |= NodeAction.Update;
+                    actions.Add((sourceNode, action));
+                }
+
+                if (sourceNode.Parent != null && sourceNode.Parent.ID != destNode.Parent.ID)
+                {
+                    action |= NodeAction.Move;
+                    actions.Add((sourceNode, action));
+                }
+            }
+
+            return actions;
         }
     }
 }

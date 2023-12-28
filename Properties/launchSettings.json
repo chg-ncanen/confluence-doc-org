@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "confluenceAccess": {
+      "commandName": "Project",
+      "commandLineArgs": "D:\\temp\\PDEConfluenceStructure.mm D:\\temp\\PDEConfluenceStructure_updated.mm"
+    }
+  }
+}

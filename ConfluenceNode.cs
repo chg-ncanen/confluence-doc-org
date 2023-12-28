@@ -7,7 +7,7 @@ using System.Xml;
 
 namespace ConfluenceAccess
 {
-    internal class ConfluenceNode
+    public class ConfluenceNode
     {
         static Random random = new Random();
 

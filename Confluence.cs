@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using ConfluenceAccess;
 using Dapplo.Confluence;
 using Dapplo.Confluence.Entities;
+using Dapplo.Confluence.Query;
 
 namespace ConfluenceAccess
 {
@@ -24,6 +25,66 @@ namespace ConfluenceAccess
             Client.SetBasicAuthentication(apiUser, apiToken);
         }
 
+        public async Task<bool> MovePage(long pageId, long newParentId)
+        {
+            if (pageId == newParentId)
+            {
+                return true;
+            }
+
+            if (pageId < 0 || newParentId < 0)
+            {
+                //this is the case when one or both of the pages have not been created yet
+                return false;
+            }
+
+            string result = await Client.Content.MoveAsync(pageId, Positions.Append, newParentId);
+
+            return result == pageId.ToString();
+        }
+
+        public async Task<bool> DeletePage(long pageId)
+        {
+            if (pageId < 0)
+            {
+                //this is the case the page has not been created yet
+                return true;
+            }
+
+            await Client.Content.DeleteAsync(pageId, false);
+
+            return true;
+        }
+
+        public async Task<bool> Rename(long pageId, string newTitle)
+        {
+            if (pageId < 0)
+            {
+                //this is the case the page has not been created yet
+                return true;
+            }
+
+            var content = await Client.Content.GetAsync(pageId);
+            content.Title = newTitle;
+            if (content.Title != newTitle)
+            {
+                await Client.Content.UpdateAsync(content);
+            }
+
+            return true;
+
+        }
+
+        public async Task<long> CreatePage(string newTitle, long parentId)
+        {
+            var content = await Client.Content.CreateAsync(
+                ContentTypes.Page, 
+                newTitle, 
+                ConfluenceSpace," ", parentId);
+
+            return content.Id;
+        }
+
         public async Task<ConfluenceTree> GetTree(int confluenceTopPage)
         {
             PagingInformation paging = new PagingInformation() { Limit = this.PagingSize };
@@ -36,8 +97,8 @@ namespace ConfluenceAccess
             queue.Enqueue(tree.Root);
 
             int count = 0;
-            while (queue.Any() && count++ < 40)
-            //while (queue.Any())
+            //while (queue.Any() && count++ < 40)
+            while (queue.Any())
             {
                 ConfluenceNode node = queue.Dequeue();
                 var confluenceChildren = await Client.Content.GetChildrenAsync(node.ID, paging);

@@ -17,9 +17,17 @@ if (string.IsNullOrEmpty(config.ApiToken))
 }
 
 
-var tree = await ConfluenceMindMap.ReadMindMap(config.OutputFile, config.ConfluenceUrl, config.ConfluenceSpace);
-Console.WriteLine(tree);
+var originalTree = await ConfluenceMindMap.ReadMindMap(args[0], config.ConfluenceUrl, config.ConfluenceSpace);
 
+var tree2 = await ConfluenceMindMap.ReadMindMap(args[1], config.ConfluenceUrl, config.ConfluenceSpace);
+
+var actions = ConfluenceTree.CompareSourceAndDestTrees(originalTree, tree2);
+
+//Print all the actions
+foreach (var action in actions)
+{
+    Console.WriteLine($"{action}");
+}
 
 //await ReadConfluenceTreeAndSave(config);
 

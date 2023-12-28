@@ -49,6 +49,7 @@ namespace ConfluenceAccess
             return tree;
         }
 
+        static int nextUnknownId = -1;
         private static void RecursivelyReadMindMapXml(ConfluenceNode currentTreeNode, XmlNodeList nodes, int tabLevel = 0)
         {
             
@@ -56,8 +57,8 @@ namespace ConfluenceAccess
             string tab = new string('\t', tabLevel);
             foreach (XmlNode node in nodes)
             {
-                string url = node.Attributes["LINK"].Value;
-                long id = long.Parse(url.Substring(url.LastIndexOf('/') + 1));
+                string url = node.Attributes["LINK"]?.Value;
+                long id = url != null ? long.Parse(url.Substring(url.LastIndexOf('/') + 1)) : nextUnknownId--;
                 string title = node.Attributes["TEXT"].Value;
                 ConfluenceNode newNode = currentTreeNode.Add(id, title);
                 RecursivelyReadMindMapXml(newNode, node.ChildNodes, tabLevel + 1);
