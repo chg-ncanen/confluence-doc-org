@@ -38,7 +38,7 @@ namespace ConfluenceAccess
 
         public static async Task<ConfluenceTree> ReadMindMap(string file, string confluenceUrl, string confluenceSpace)
         {
-            ConfluenceTree tree = new ConfluenceTree(0,"",confluenceUrl, confluenceSpace);
+            ConfluenceTree tree = new ConfluenceTree(0, "", confluenceUrl, confluenceSpace);
             XmlDocument doc = new XmlDocument();
             doc.Load(file);
 
@@ -52,11 +52,15 @@ namespace ConfluenceAccess
         static int nextUnknownId = -1;
         private static void RecursivelyReadMindMapXml(ConfluenceNode currentTreeNode, XmlNodeList nodes, int tabLevel = 0)
         {
-            
+
             if (nodes == null) { return; }
             string tab = new string('\t', tabLevel);
             foreach (XmlNode node in nodes)
             {
+                if (node.Name == "icon")
+                {
+                    continue;
+                }
                 string url = node.Attributes["LINK"]?.Value;
                 long id = url != null ? long.Parse(url.Substring(url.LastIndexOf('/') + 1)) : nextUnknownId--;
                 string title = node.Attributes["TEXT"].Value;

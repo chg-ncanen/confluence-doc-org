@@ -33,7 +33,7 @@ namespace ConfluenceAccess
 
         public ConfluenceTree Tree { get; }
 
-        public string Url => $"{BaseUrl}/spaces/{ConfluenceSpace}/pages/{ID}";
+        public string Url => ID > 0 ? $"{BaseUrl}/spaces/{ConfluenceSpace}/pages/{ID}" : "";
 
         public ConfluenceNode Add(long id, string title)
         {

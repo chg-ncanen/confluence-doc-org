@@ -55,6 +55,46 @@ namespace ConfluenceAccess
             NodeLookupById.Add(child.ID, child);
         }
 
+        public class ConfluenceAction
+        {
+            public NodeAction Action { get; set; }
+            public ConfluenceNode OldNode { get; set; }
+            public ConfluenceNode NewNode { get; set; }
+
+            public ConfluenceAction(NodeAction action, ConfluenceNode oldNode, ConfluenceNode newNode)
+            {
+                Action = action;
+                OldNode = oldNode;
+                NewNode = newNode;
+            }
+
+            public override string ToString()
+            {
+                if (Action == NodeAction.Delete)
+                {
+                    return $"[{Action}] {OldNode}";
+                }
+                else if (Action == NodeAction.Create)
+                {
+                    return $"[{Action}] {NewNode} --> UNDER {NewNode.Parent}";
+                }
+                else
+                {
+                    if ((Action & NodeAction.Update) == NodeAction.Update)
+                    {
+                        return $"[{Action}] {OldNode} --> {NewNode.Title}";
+                    }
+
+                    if ((Action & NodeAction.Move) == NodeAction.Move)
+                    {
+                        return $"[{Action}] {OldNode} --> UNDER {NewNode.Parent}";
+                    }
+                }
+
+                return $"[{Action}] {OldNode} --> {NewNode}";
+            }
+        }
+
         [Flags]
         public enum NodeAction
         {
@@ -65,15 +105,15 @@ namespace ConfluenceAccess
             Delete = 8
         }
 
-        public static List<(ConfluenceNode Node, NodeAction Action)> CompareSourceAndDestTrees(ConfluenceTree source, ConfluenceTree dest)
+        public static List<ConfluenceAction> CompareSourceAndDestTrees(ConfluenceTree source, ConfluenceTree dest)
         {
-            List<(ConfluenceNode Node, NodeAction Action)> actions = new List<(ConfluenceNode Node, NodeAction Action)>();
+            var actions = new List<ConfluenceAction>();
 
             foreach (ConfluenceNode destNode in dest.NodeLookupById.Values)
             {
                 if (source.NodeLookupById.ContainsKey(destNode.ID) == false)
                 {
-                    actions.Add((destNode, NodeAction.Create));
+                    actions.Add(new ConfluenceAction(NodeAction.Create, null, destNode));
                 }
             }
             
@@ -83,8 +123,8 @@ namespace ConfluenceAccess
 
                 if (dest.NodeLookupById.ContainsKey(sourceNode.ID) == false)
                 {
-                    action |= NodeAction.Delete;
-                    actions.Add((sourceNode, action));
+                    action = NodeAction.Delete;
+                    actions.Add(new ConfluenceAction(action, sourceNode, null));
                     continue;
                 }
 
@@ -92,13 +132,16 @@ namespace ConfluenceAccess
                 if (sourceNode.Title != destNode.Title)
                 {
                     action |= NodeAction.Update;
-                    actions.Add((sourceNode, action));
                 }
 
                 if (sourceNode.Parent != null && sourceNode.Parent.ID != destNode.Parent.ID)
                 {
                     action |= NodeAction.Move;
-                    actions.Add((sourceNode, action));
+                }
+
+                if (action != NodeAction.NoAction)
+                {
+                    actions.Add(new ConfluenceAction(action, sourceNode, destNode));
                 }
             }
 

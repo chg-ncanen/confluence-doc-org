@@ -23,11 +23,24 @@ var tree2 = await ConfluenceMindMap.ReadMindMap(args[1], config.ConfluenceUrl, c
 
 var actions = ConfluenceTree.CompareSourceAndDestTrees(originalTree, tree2);
 
+var actionOrder = new ConfluenceTree.NodeAction[] {
+    ConfluenceTree.NodeAction.Delete,
+    ConfluenceTree.NodeAction.Create,
+    ConfluenceTree.NodeAction.Update,
+    ConfluenceTree.NodeAction.Move};
+
 //Print all the actions
-foreach (var action in actions)
+foreach (var nextAction in actionOrder)
 {
-    Console.WriteLine($"{action}");
+    Console.WriteLine($"******************** {nextAction} ********************");
+    foreach (var action in actions.Where(a => (a.Action & nextAction) == nextAction))
+    {
+        Console.WriteLine($"{action}");
+    }
+
+    Console.WriteLine();
 }
+
 
 //await ReadConfluenceTreeAndSave(config);
 
