@@ -2,7 +2,7 @@
   "profiles": {
     "confluenceAccess": {
       "commandName": "Project",
-      "commandLineArgs": "c:\\temp\\PDEConfluenceNow.mm c:\\temp\\NewPDE.mm"
+      "commandLineArgs": "c:\\temp\\NowPDE.mm c:\\temp\\NewPDE.mm"
     }
   }
 }

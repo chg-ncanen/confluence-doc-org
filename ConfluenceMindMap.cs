@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
+using static System.Windows.Forms.LinkLabel;
 
 namespace ConfluenceAccess
 {
@@ -12,25 +13,27 @@ namespace ConfluenceAccess
     {
         public string CreateXmlFromTree(ConfluenceTree tree)
         {
+            var time = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             StringBuilder builder = new StringBuilder();
             builder
                 .AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>")
                 .AppendLine("<map version=\"0.8.1\">");
-            if (tree.Root != null) { AppendMindMapNodeXml(tree.Root, builder); }
+            if (tree.Root != null) { AppendMindMapNodeXml(tree.Root, builder, time); }
             builder.AppendLine("</map>");
 
             return builder.ToString();
         }
 
-        private static void AppendMindMapNodeXml(ConfluenceNode node, StringBuilder builder)
+        private static void AppendMindMapNodeXml(ConfluenceNode node, StringBuilder builder, long time)
         {
             builder
-                .Append($"""<node CREATED="{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}" ID="{node.NodeID}" LINK="{node.Url}" MODIFIED="{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}" TEXT="{System.Security.SecurityElement.Escape(node.Title)}" """.Trim())
+                .Append($"""<node CREATED="{time}" ID="{node.NodeID}" MODIFIED="{time}" TEXT="{System.Security.SecurityElement.Escape(node.Title)}" """)
+                .Append($"""LINK = "{node.Url}" """)
                 .AppendLine(node.Children.Count() == 0 ? "/>" : ">");
 
             foreach (ConfluenceNode n in node.Children)
             {
-                AppendMindMapNodeXml(n, builder);
+                AppendMindMapNodeXml(n, builder, time);
             }
 
             builder.Append(node.Children.Count() == 0 ? "" : "</node>\r\n");
@@ -62,7 +65,7 @@ namespace ConfluenceAccess
                     continue;
                 }
                 string url = node.Attributes["LINK"]?.Value;
-                long id = url != null ? long.Parse(url.Substring(url.LastIndexOf('/') + 1)) : nextUnknownId--;
+                long id = !string.IsNullOrWhiteSpace(url) ? long.Parse(url.Substring(url.LastIndexOf('/') + 1)) : nextUnknownId--;
                 string title = node.Attributes["TEXT"].Value;
                 ConfluenceNode newNode = currentTreeNode.Add(id, title);
                 RecursivelyReadMindMapXml(newNode, node.ChildNodes, tabLevel + 1);

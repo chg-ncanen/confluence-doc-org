@@ -24,8 +24,8 @@ namespace ConfluenceAccess
 
         public string NodeID { get; } = GenerateUniqueAlphaNumericString(26);
 
-        public long ID { get; }
-        public string Title { get; }
+        public long ID { get; set; }
+        public string Title { get; set; }
         public ConfluenceNode Parent { get; set; }
         public string BaseUrl { get; }
         public string ConfluenceSpace { get; }
@@ -37,10 +37,14 @@ namespace ConfluenceAccess
 
         public ConfluenceNode Add(long id, string title)
         {
-            ConfluenceNode child = new ConfluenceNode(Tree, id, title, this, this.BaseUrl, this.ConfluenceSpace);
+            return Add(new ConfluenceNode(Tree, id, title, this, this.BaseUrl, this.ConfluenceSpace));
+        }
+
+        public ConfluenceNode Add(ConfluenceNode child)
+        {
             Children.Add(child);
             Tree.RegisterNode(child);
-            return child;            
+            return child;
         }
 
         public ConfluenceNode(ConfluenceTree tree, long id, string title, ConfluenceNode parent, string baseUrl, string confluenceSpace)

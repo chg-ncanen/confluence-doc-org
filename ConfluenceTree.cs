@@ -55,6 +55,12 @@ namespace ConfluenceAccess
             NodeLookupById.Add(child.ID, child);
         }
 
+        internal void UnregisterNode(ConfluenceNode child)
+        {
+            NodeLookupById.Remove(child.ID);
+        }
+
+
         public class ConfluenceAction
         {
             public NodeAction Action { get; set; }
@@ -146,6 +152,29 @@ namespace ConfluenceAccess
             }
 
             return actions;
+        }
+
+        internal ConfluenceNode Remove(long nodeID)
+        {
+
+            var nodeToRemove = GetNodeById(nodeID);
+            if (nodeToRemove == null) return null;
+
+            if (nodeToRemove.Parent == null)
+            {
+                throw new ArgumentException("Cannot remove root node");
+            }
+
+            UnregisterNode(nodeToRemove);
+            nodeToRemove.Parent.Children.Remove(nodeToRemove);
+            return nodeToRemove;
+        }
+
+        internal void Move(long nodeID, long toParentID)
+        {
+            var nodeMoving = Remove(nodeID);
+            var newParent = GetNodeById(toParentID);
+            newParent.Add(nodeMoving);
         }
     }
 }
