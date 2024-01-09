@@ -43,6 +43,7 @@ namespace ConfluenceAccess
         public ConfluenceNode Add(ConfluenceNode child)
         {
             Children.Add(child);
+            child.Parent = this;
             Tree.RegisterNode(child);
             return child;
         }

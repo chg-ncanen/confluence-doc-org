@@ -51,7 +51,7 @@ namespace ConfluenceAccess
                 return false;
             }
 
-            return result == pageId.ToString();
+            return result.Contains(pageId.ToString());
         }
 
         public async Task<bool> DeletePage(long pageId)

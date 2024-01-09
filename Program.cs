@@ -65,9 +65,7 @@ async Task ExecuteChanges(string[] args, IConfig config, Confluence confluence)
     var actions = ConfluenceTree.CompareSourceAndDestTrees(originalTree, tree2);
 
     PrintActions(actions);
-
     Console.WriteLine("Action Count: " + actions.Count());
-    return;
     try
     {
         await CreateAction(actions, confluence, originalTree);
