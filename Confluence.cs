@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 using ConfluenceAccess;
@@ -38,7 +39,17 @@ namespace ConfluenceAccess
                 return false;
             }
 
-            string result = await Client.Content.MoveAsync(pageId, Positions.Append, newParentId);
+            string result = null;
+
+            try
+            {
+                result = await Client.Content.MoveAsync(pageId, Positions.Append, newParentId);
+            }
+            catch (Dapplo.Confluence.ConfluenceException ex)
+            {
+                Console.Error.WriteLine("ERROR: " + ex.Message);
+                return false;
+            }
 
             return result == pageId.ToString();
         }
@@ -65,10 +76,19 @@ namespace ConfluenceAccess
             }
 
             var content = await Client.Content.GetAsync(pageId);
-            content.Title = newTitle;
             if (content.Title != newTitle)
             {
-                await Client.Content.UpdateAsync(content);
+                content.Version.Number++;
+                content.Title = newTitle;
+                try
+                {
+                    await Client.Content.UpdateAsync(content);
+                }
+                catch (Dapplo.Confluence.ConfluenceException ex)
+                {
+                    Console.Error.WriteLine("ERROR: " + ex.Message);
+                    return false;
+                }
             }
 
             return true;
@@ -77,11 +97,19 @@ namespace ConfluenceAccess
 
         public async Task<long> CreatePage(string newTitle, long parentId)
         {
-            var content = await Client.Content.CreateAsync(
-                ContentTypes.Page, 
-                newTitle, 
-                ConfluenceSpace," ", parentId);
-
+            Content content = null;
+            try
+            {
+                content = await Client.Content.CreateAsync(
+                ContentTypes.Page,
+                newTitle,
+                ConfluenceSpace, " ", parentId);
+            }
+            catch (Dapplo.Confluence.ConfluenceException ex)
+            {
+                Console.Error.WriteLine("ERROR: " + ex.Message);
+                return 0;
+            }
             return content.Id;
         }
 

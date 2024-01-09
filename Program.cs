@@ -15,18 +15,21 @@ if (string.IsNullOrEmpty(config.ApiToken))
     Console.WriteLine("CONFLUENCE_API api key was not specified, please update the app.config before running");
     return;
 }
+var confluence = new Confluence(config.ApiUser, config.ApiToken, config.ConfluenceUrl, config.ConfluenceSpace);
 
-await ExecuteChanges(args, config);
+bool isSimulate = false;
 
-
-//await ReadConfluenceTreeAndSave(config);
-
-
+await ExecuteChanges(args, config, isSimulate ? null : confluence);
 
 
-static async Task ReadConfluenceTreeAndSave(IConfig config)
+//await ReadConfluenceTreeAndSave(config, confluence);
+
+
+
+
+static async Task ReadConfluenceTreeAndSave(IConfig config, Confluence confluence)
 {
-    var confluence = new Confluence(config.ApiUser, config.ApiToken, config.ConfluenceUrl, config.ConfluenceSpace);
+    
     var tree = await confluence.GetTree(int.Parse(config.ConfluenceTopPage));
 
     WriteTreeToFile(config.OutputFile, tree, true);
@@ -53,7 +56,7 @@ static void PrintActions(List<ConfluenceTree.ConfluenceAction> actions)
     }
 }
 
-async Task ExecuteChanges(string[] args, IConfig config)
+async Task ExecuteChanges(string[] args, IConfig config, Confluence confluence)
 {
     var originalTree = await ConfluenceMindMap.ReadMindMap(args[0], config.ConfluenceUrl, config.ConfluenceSpace);
 
@@ -64,14 +67,12 @@ async Task ExecuteChanges(string[] args, IConfig config)
     PrintActions(actions);
 
     Console.WriteLine("Action Count: " + actions.Count());
-
-
-
+    return;
     try
     {
-        CreateAction(actions, originalTree);
-        UpdateAction(actions);
-        MoveAction(actions, originalTree);
+        await CreateAction(actions, confluence, originalTree);
+        await UpdateAction(actions, confluence);
+        await MoveAction(actions, confluence, originalTree);
     }
     catch (Exception ex)
     {
@@ -81,25 +82,31 @@ async Task ExecuteChanges(string[] args, IConfig config)
 
 
     Console.WriteLine("SAVING PROGRESS...");
-    Debug.Assert(ConfluenceTree.CompareSourceAndDestTrees(originalTree, tree2).Count() == 0);
+    //Debug.Assert(ConfluenceTree.CompareSourceAndDestTrees(originalTree, tree2).Count() == 0);
     WriteTreeToFile(args[1], tree2, false);
     WriteTreeToFile(args[0], originalTree, false);
 }
 
-void UpdateAction(List<ConfluenceTree.ConfluenceAction> actions)
+async Task UpdateAction(List<ConfluenceTree.ConfluenceAction> actions, Confluence confluence)
 {
     Console.WriteLine($"****************************************");
     Console.WriteLine($"UPDATING");
     Console.WriteLine($"****************************************");
     foreach (var action in actions.Where(a => (a.Action & ConfluenceTree.NodeAction.Update) == ConfluenceTree.NodeAction.Update))
     {
+        bool success = true;
         Console.WriteLine(action);
-        action.OldNode.Title = action.NewNode.Title;
+        if (confluence != null)
+        {
+            success = await confluence.Rename(action.NewNode.ID, action.NewNode.Title);
+        }
 
+        //If successful, record the change, otherwise do nothing so it can be tried again another time
+        if (success) { action.OldNode.Title = action.NewNode.Title; }
     }
 }
 
-void MoveAction(List<ConfluenceTree.ConfluenceAction> actions, ConfluenceTree original)
+async Task MoveAction(List<ConfluenceTree.ConfluenceAction> actions, Confluence confluence, ConfluenceTree original)
 {
     Console.WriteLine($"****************************************");
     Console.WriteLine($"MOVING");
@@ -110,21 +117,28 @@ void MoveAction(List<ConfluenceTree.ConfluenceAction> actions, ConfluenceTree or
         if (action.NewNode.Parent.ID < 0)
         {
             Console.WriteLine("------------------> ERROR: Cannot move to a non-existant node");
+            return;
         }
-        original.Move(action.NewNode.ID, action.NewNode.Parent.ID);
+        bool success = await confluence.MovePage(action.NewNode.ID, action.NewNode.Parent.ID);
 
-        
+        //If success then record the change
+        if (success)
+        {
+            original.Move(action.NewNode.ID, action.NewNode.Parent.ID);
+        }
     }
 }
 
-static void CreateAction(List<ConfluenceTree.ConfluenceAction> actions, ConfluenceTree original)
+static async Task CreateAction(List<ConfluenceTree.ConfluenceAction> actions, Confluence confluence, ConfluenceTree original)
 {
     Console.WriteLine($"****************************************");
     Console.WriteLine($"CREATING");
     Console.WriteLine($"****************************************");
+
+    int inifinteLoopBreakerCount = actions.Count() * 100;
     //Do creation
     var createActions = new Queue<ConfluenceTree.ConfluenceAction>(actions.Where(a => a.Action == ConfluenceTree.NodeAction.Create).ToArray().Reverse());
-    while (createActions.Count > 0)
+    while (createActions.Count > 0 && inifinteLoopBreakerCount-- >= 0)
     {
         var action = createActions.Dequeue();
         if (action.NewNode.Parent.ID < 0)
@@ -132,12 +146,30 @@ static void CreateAction(List<ConfluenceTree.ConfluenceAction> actions, Confluen
             createActions.Enqueue(action);
             continue;
         }
-        Console.WriteLine(action);
-        action.NewNode.ID = action.NewNode.ID * -1; // TODO: get this from the api
-        var parentInOriginal = original.GetNodeById(action.NewNode.Parent.ID);
-        parentInOriginal.Add(action.NewNode.ID, action.NewNode.Title);
 
-        Console.WriteLine($"{action}");
+        Console.WriteLine(action);
+        long newID = 0;
+        if (confluence != null)
+        {
+            newID = await confluence.CreatePage(action.NewNode.Title, action.NewNode.Parent.ID);
+        }
+        else
+        {
+            newID = Math.Abs(action.NewNode.ID);
+        }
+
+        //If successful, record the change, otherwise do nothing so it can be tried again another time
+        //This could cause an infinite loop which is prevented by the counter
+        if (newID > 0)
+        {
+            action.NewNode.ID = newID;
+            var parentInOriginal = original.GetNodeById(action.NewNode.Parent.ID);
+            parentInOriginal.Add(action.NewNode.ID, action.NewNode.Title);
+        }
+        else
+        {
+
+        }
     }
 }
 
